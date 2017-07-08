@@ -10,6 +10,13 @@ Gutenberg
     :target: https://pypi.python.org/pypi/gutenberg/
 
 
+
+THIS FORK
+=========
+I want a minimal project that can download & clean up the text. I don't need/want
+the overhead of a database nor the search options. So this fork will be the master
+version with lots of stuff deleted. Probably best to not pull it..
+
 Overview
 ========
 

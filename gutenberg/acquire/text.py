@@ -1,22 +1,11 @@
 """Module to deal with text acquisition."""
 
-
 from __future__ import absolute_import, unicode_literals
-
-import gzip
-import os
-from contextlib import closing
-
 import requests
-
 from gutenberg._domain_model.exceptions import UnknownDownloadUriException
-from gutenberg._domain_model.persistence import local_path
 from gutenberg._domain_model.types import validate_etextno
 from gutenberg._util.decorators import execute_only_once
-from gutenberg._util.os import makedirs
-from gutenberg._util.os import remove
 
-_TEXT_CACHE = local_path('text')
 _GUTENBERG_MIRROR = 'http://aleph.gutenberg.org'
 
 
@@ -79,53 +68,12 @@ def _format_download_uri(etextno, mirror=None):
                                       .format(etextno, uri_root))
 
 
-def load_etext(etextno, refresh_cache=False, mirror=None):
+def load_etext(etextno, mirror=None):
     """Returns a unicode representation of the full body of a Project Gutenberg
-    text. After making an initial remote call to Project Gutenberg's servers,
-    the text is persisted locally.
-
+    text.
     """
     etextno = validate_etextno(etextno)
-    cached = os.path.join(_TEXT_CACHE, '{0}.txt.gz'.format(etextno))
-
-    if refresh_cache:
-        remove(cached)
-    if not os.path.exists(cached):
-        makedirs(os.path.dirname(cached))
-        download_uri = _format_download_uri(etextno, mirror)
-        response = requests.get(download_uri)
-        text = response.text
-        with closing(gzip.open(cached, 'w')) as cache:
-            cache.write(text.encode('utf-8'))
-
-    with closing(gzip.open(cached, 'r')) as cache:
-        text = cache.read().decode('utf-8')
+    download_uri = _format_download_uri(etextno, mirror)
+    response = requests.get(download_uri)
+    text = response.text
     return text
-
-
-def _main():
-    """Command line interface to the module.
-
-    """
-    from argparse import ArgumentParser, FileType
-    from gutenberg import Error
-    from gutenberg._util.os import reopen_encoded
-
-    parser = ArgumentParser(description='Download a Project Gutenberg text')
-    parser.add_argument('etextno', type=int)
-    parser.add_argument('outfile', type=FileType('w'))
-    parser.add_argument('--mirror', '-m', type=str)
-    args = parser.parse_args()
-
-    mirror = args.mirror or os.environ.get('GUTENBERG_MIRROR')
-
-    try:
-        text = load_etext(args.etextno, mirror=mirror)
-        with reopen_encoded(args.outfile, 'w', 'utf8') as outfile:
-            outfile.write(text)
-    except Error as error:
-        parser.error(str(error))
-
-
-if __name__ == '__main__':
-    _main()
